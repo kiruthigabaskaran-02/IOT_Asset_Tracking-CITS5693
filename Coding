@@ -1,0 +1,141 @@
+# ============================================================
+# IoT-Based Asset Tracking System
+# Single File Project using Python + Flask
+#
+# Features:
+# ✔ Receives asset location
+# ✔ Stores latest asset information
+# ✔ Checks geofence
+# ✔ Displays asset status
+#
+# Install:
+# pip install flask
+#
+# Run:
+# python app.py
+#
+# Open:
+# http://127.0.0.1:5000
+# ============================================================
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# ------------------------------------------------------------
+# Store latest asset information
+# ------------------------------------------------------------
+asset = {
+    "asset_id": "",
+    "latitude": 0.0,
+    "longitude": 0.0,
+    "status": "Unknown"
+}
+
+# ------------------------------------------------------------
+# Geofence Settings
+# Example:
+# Chennai Area
+# ------------------------------------------------------------
+CENTER_LAT = 13.0827
+CENTER_LON = 80.2707
+
+LAT_RANGE = 0.02
+LON_RANGE = 0.02
+
+
+# ------------------------------------------------------------
+# Function to check whether asset is inside geofence
+# ------------------------------------------------------------
+def check_geofence(lat, lon):
+
+    if (CENTER_LAT - LAT_RANGE <= lat <= CENTER_LAT + LAT_RANGE and
+        CENTER_LON - LON_RANGE <= lon <= CENTER_LON + LON_RANGE):
+
+        return "Inside Safe Zone"
+
+    return "ALERT : Outside Safe Zone"
+
+
+# ------------------------------------------------------------
+# Home Page
+# ------------------------------------------------------------
+@app.route("/")
+def home():
+
+    html = f"""
+    <h2>IoT Asset Tracking System</h2>
+
+    <table border="1" cellpadding="8">
+
+        <tr>
+            <th>Asset ID</th>
+            <td>{asset['asset_id']}</td>
+        </tr>
+
+        <tr>
+            <th>Latitude</th>
+            <td>{asset['latitude']}</td>
+        </tr>
+
+        <tr>
+            <th>Longitude</th>
+            <td>{asset['longitude']}</td>
+        </tr>
+
+        <tr>
+            <th>Status</th>
+            <td>{asset['status']}</td>
+        </tr>
+
+    </table>
+
+    <br>
+
+    <h3>Send Data using POST:</h3>
+
+    <p>URL:</p>
+
+    <pre>/update</pre>
+
+    """
+
+    return html
+
+
+# ------------------------------------------------------------
+# API to receive GPS data
+# ------------------------------------------------------------
+@app.route("/update", methods=["POST"])
+def update_location():
+
+    # Read JSON sent by IoT device
+    data = request.get_json()
+
+    # Update asset details
+    asset["asset_id"] = data["asset_id"]
+    asset["latitude"] = data["latitude"]
+    asset["longitude"] = data["longitude"]
+
+    # Check geofence
+    asset["status"] = check_geofence(
+        asset["latitude"],
+        asset["longitude"]
+    )
+
+    print("--------------------------------")
+    print("Asset Updated")
+    print(asset)
+
+    return jsonify({
+        "message": "Location Updated",
+        "asset": asset
+    })
+
+
+# ------------------------------------------------------------
+# Run Server
+# ------------------------------------------------------------
+if __name__ == "__main__":
+
+    app.run(debug=True)
